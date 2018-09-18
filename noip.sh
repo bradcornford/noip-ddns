@@ -1,22 +1,20 @@
 #!/bin/bash
 
 # No-IP uses emails as usernames, so make sure that you encode the @ as %40
-USERNAME=username
-PASSWORD=password
-HOST=hostsite
-LOGFILE=logdir/noip.log
-STOREDIPFILE=configdir/current_ip
-USERAGENT="Simple Bash No-IP Updater/0.4 antoniocs@gmail.com"
+USERNAME=$1
+PASSWORD=$2
+HOST=$3
+STOREDIPFILE="/tmp/current_ip_noip-$HOST"
 
 if [ ! -e $STOREDIPFILE ]; then
 	touch $STOREDIPFILE
 fi
 
-NEWIP=$(wget -O - http://icanhazip.com/ -o /dev/null)
+NEWIP=$(curl -kLs http://api.ipify.org)
 STOREDIP=$(cat $STOREDIPFILE)
 
 if [ "$NEWIP" != "$STOREDIP" ]; then
-	RESULT=$(wget -O "$LOGFILE" -q --user-agent="$USERAGENT" --no-check-certificate "https://$USERNAME:$PASSWORD@dynupdate.no-ip.com/nic/update?hostname=$HOST&myip=$NEWIP")
+	RESULT=$(curl -kLs "https://$(echo -ne $USERNAME | hexdump -v -e '/1 "%02x"' | sed 's/\(..\)/%\1/g'):$(echo -ne $PASSWORD | hexdump -v -e '/1 "%02x"' | sed 's/\(..\)/%\1/g')@dynupdate.no-ip.com/nic/update?hostname=$HOST&myip=$NEWIP")
 
 	LOGLINE="[$(date +"%Y-%m-%d %H:%M:%S")] $RESULT"
 	echo $NEWIP > $STOREDIPFILE
@@ -24,7 +22,7 @@ else
 	LOGLINE="[$(date +"%Y-%m-%d %H:%M:%S")] No IP change"
 fi
 
-echo $LOGLINE >> $LOGFILE
+echo $LOGLINE
 
 exit 0
 
